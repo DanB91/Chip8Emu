@@ -1,12 +1,18 @@
 #include <SDL/SDL.h>
 #include <iostream>
-#include "Chip8Exception.h"
+#include <ncurses.h>
 #include "Chip8.h"
 
+#define MIN_ARGS 2
 
 static SDL_Event event; //represents an event such as a keypress or quititng the game
 static SDL_Surface *screen; //represents the screen
 static bool running = true; //tells whether the emulator is running
+
+static void printUsageAndExit(){
+	std::cout << "Usage: chip8emu file [resolution]\n";
+	exit(1);
+}
 
 static void handleSDLEvents()
 {
@@ -42,29 +48,41 @@ static void initSDL(int width, int height)
 
 }
 
+void drawDebugOutput(){
+	printw("%s", Chip8::getCPUStatus().c_str());
+
+	move(0,0);
+	refresh();
+
+}
+
 
 int main(int argc, char **argv)
 {
 	int width = 640, height = 320;
 
+	if(argc < MIN_ARGS) printUsageAndExit();
+	
 	try{
 		initSDL(width, height);
 		Chip8::loadGame(argv[1]);
+		initscr();
 
 		while(running)
 		{
-			
+			drawDebugOutput();	
 			handleSDLEvents();
 			Chip8::step();
 			Chip8::updateKeys();
 		}
-
+		
+		endwin();
 
 	}
 	catch(std::exception &e)
 	{
 		std::cout << e.what() << '\n';
-		return -1;
+		return 1;
 	}
 
 
