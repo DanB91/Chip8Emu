@@ -59,6 +59,8 @@ namespace Chip8{
 	static unsigned char I; //index register
 	static unsigned short PC; //program counter register
 	static unsigned char SP;  //stack pointer
+	static unsigned char delayTimer; //if set above 0 it counts down to 0 at 60hz
+	static unsigned char soundTimer; //same as delayTimer
 
 
 	//methods
@@ -80,14 +82,12 @@ namespace Chip8{
 
 	void step(){
 
-		unsigned short currentPC = PC;
 
 		Opcode o(RAM[PC], RAM[PC + 1]);
 
 		opcodeFunctions[o.nibbles.n4](o);
 
-		if(currentPC == PC)
-			PC += 2;
+		
 
 			
 	}
@@ -121,6 +121,8 @@ namespace Chip8{
 						switch(o.bytes.lowByte){
 							case 0xE0: //clear screen
 								//todo
+								
+								PC += 2;
 								break;
 							case 0xEE: //return from subroutine
 								PC = stack[--SP];
@@ -150,24 +152,30 @@ namespace Chip8{
 
 		opcodeFunctions[3] = [&](Opcode o){ //skip instruction if VX == NN
 			if(V[o.nibbles.n3] == o.bytes.lowByte) PC += 2;
+			PC += 2;
 		};
 
 		opcodeFunctions[4] = [&](Opcode o){ //skip instruction if VX != NN
 			if(V[o.nibbles.n3] != o.bytes.lowByte) PC += 2;
+			
+			PC += 2;
 		};
 
 		opcodeFunctions[5] = [&](Opcode o){ //skip instruction if VX == VY
 			if(o.nibbles.n1 != 0) 	throw IllegalOpcodeException(o.fullOpcode);
  
 			if(V[o.nibbles.n3] == V[o.nibbles.n2]) PC += 2;
+			PC += 2;
 		};
 		
 		opcodeFunctions[6] = [&](Opcode o){ //set VX to NN
 			V[o.nibbles.n3] = o.bytes.lowByte;
+			PC += 2;
 		};
 		
 		opcodeFunctions[7] = [&](Opcode o){ //add NN to VX
 			V[o.nibbles.n3] += o.bytes.lowByte;
+			PC += 2;
 		};
 
 
@@ -208,13 +216,14 @@ namespace Chip8{
 					break;
 				default:
 					throw IllegalOpcodeException(o.fullOpcode);
-			}
+			}	
+			PC += 2;
 		};
 		
 		opcodeFunctions[9] = [&](Opcode o){ //skip instruction if VX != VY
 			if(o.nibbles.n1 != 0) 	throw IllegalOpcodeException(o.fullOpcode);
- 
 			if(V[o.nibbles.n3] != V[o.nibbles.n2]) PC += 2;
+			PC += 2;
 		};
 		
 		opcodeFunctions[0xA] = [&](Opcode o){ //set I to NNN
@@ -223,6 +232,7 @@ namespace Chip8{
 			address |= static_cast<unsigned short>(o.nibbles.n2) << 4; 
 			address |= o.nibbles.n1;
 		       	I = address;	
+			PC += 2;
 		};
 
 		opcodeFunctions[0xB] = [&](Opcode o){ //set PC to NNN + V0
@@ -232,6 +242,84 @@ namespace Chip8{
 			address |= o.nibbles.n1;
 		       	PC = address + V[0];	
 		};
+
+		opcodeFunctions[0xC] = [&](Opcode o){ //set VX to random number & NN
+			srand(time(NULL)); //set seed
+			V[o.nibbles.n3] = rand() & o.bytes.lowByte;
+			PC += 2;
+		};
+
+		opcodeFunctions[0xD] = [&](Opcode o){ //draw sprite
+			//todo
+			PC += 2;
+		};
+		
+		opcodeFunctions[0xE] = [&](Opcode o){ 
+			switch(o.bytes.lowByte){
+				case 0x9E: //skip next instruction if key in VX is pressed
+					//todo
+					break;
+				case 0xA1: //skip next instruction if key in VX is NOT pressed
+					//todo
+					break;
+				default:
+					throw IllegalOpcodeException(o.fullOpcode);
+			}
+
+			PC += 2;
+		};
+
+		opcodeFunctions[0xF] = [&](Opcode o){
+			switch(o.bytes.lowByte){
+				case 7: //set VX to delay timer
+					V[o.nibbles.n3] = delayTimer;
+					break;
+				case 0xA: //wait for key press and store it in VX
+					//todo
+					break;
+				case 0x15: //set delay timer to VX
+					delayTimer = V[o.nibbles.n3];
+					break;
+				case 0x18: //set sound timer to VX
+					soundTimer = V[o.nibbles.n3];
+					break;
+				case 0x1E: //adds VX to I
+					if(I + static_cast<unsigned int>(V[o.nibbles.n3]) > 0xFFF)
+						V[0xF] = 1;
+					else 
+						V[0xF] = 0;
+
+					I += V[o.nibbles.n3]; 
+					break;
+				case 0x29: //set I to location of sprite for character in VX
+					//todo
+					break;
+				case 0x33: //stores decimal version of VX in memory starting at I
+					//todo
+					break;
+				case 0x55: //stores V0 to VX in address starting at I
+					for(int i = 0; i <= V[o.nibbles.n3]; i++)
+						RAM[I + i] = V[i];
+
+					I += o.nibbles.n3 + 1;
+					break;
+
+				case 0x65: //stores memory starting from I into V0 to VX
+					for(int i = 0; i <= V[o.nibbles.n3]; i++)
+						V[i] = RAM[I + i];
+
+					I += o.nibbles.n3 + 1;
+
+					break;
+
+
+				default:
+					throw IllegalOpcodeException(o.fullOpcode);
+
+			}
+			PC += 2;
+		};
+
 
 
 	}
@@ -244,7 +332,11 @@ namespace Chip8{
 		memset(V, 0, NUM_REGISTERS);
 		SP = 0;
 		PC = ROM_OFFSET;
+		soundTimer = 0;
+		delayTimer = 0;
 		initOpcodeFunctions();
+		
+
 
 
 	}
