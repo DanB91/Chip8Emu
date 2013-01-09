@@ -4,6 +4,8 @@
 
 namespace Chip8{
 
+	void init();
+
 	//loads the program into chip8 memeory
 	void loadGame(char *fileName);
 	

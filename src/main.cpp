@@ -56,6 +56,12 @@ void drawDebugOutput(){
 
 }
 
+static void cleanUp(){
+	endwin();
+	SDL_FreeSurface(screen);
+	SDL_Quit();
+}
+
 
 int main(int argc, char **argv)
 {
@@ -65,6 +71,7 @@ int main(int argc, char **argv)
 	
 	try{
 		initSDL(width, height);
+		Chip8::init();
 		Chip8::loadGame(argv[1]);
 		initscr();
 
@@ -76,11 +83,12 @@ int main(int argc, char **argv)
 			Chip8::updateKeys();
 		}
 		
-		endwin();
+		cleanUp();
 
 	}
 	catch(std::exception &e)
 	{
+		cleanUp();
 		std::cout << e.what() << '\n';
 		return 1;
 	}
