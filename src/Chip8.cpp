@@ -1,7 +1,9 @@
 #include "Chip8.h"
 #include "IllegalOpcodeException.h"
+#include "GFX.h"
 #include <sstream>
 #include <functional>
+#include <vector>
 
 #define RAM_SIZE 0x1000
 #define ROM_OFFSET 0x200
@@ -39,7 +41,8 @@ namespace Chip8{
 			fullOpcode |= static_cast<unsigned short>(highByte) << 8;
 			fullOpcode |= lowByte;
 		}
-		
+		;
+
 	};
 	
 	//globals
@@ -56,12 +59,13 @@ namespace Chip8{
 	static unsigned char RAM[RAM_SIZE]; 	
 	static unsigned char V[NUM_REGISTERS]; //scratch registers
 	static unsigned short stack[STACK_SIZE]; //used to keep track of calling addrs
-	static unsigned char I; //index register
+	static unsigned short I; //index register
 	static unsigned short PC; //program counter register
 	static unsigned char SP;  //stack pointer
 	static unsigned char delayTimer; //if set above 0 it counts down to 0 at 60hz
 	static unsigned char soundTimer; //same as delayTimer
-
+	static bool drawFlag;
+	static std::stringstream debugStringStream;
 
 	//methods
 	std::string getCPUStatus(){
@@ -73,17 +77,18 @@ namespace Chip8{
 			stream  << "\tV" << i << ": "<< static_cast<int>(V[i]);
 		}
 
-		stream << "\n PC: " << PC << "  I: " << I;
+		stream << "\n PC: " << PC << "  I: " << I << "\n" << debugStringStream;
 
 		return stream.str();
 	}
 
-	bool shouldDraw(){ return true; }
+	bool shouldDraw(){ return drawFlag; }
 
 	void step(){
 
 
 		Opcode o(RAM[PC], RAM[PC + 1]);
+		drawFlag = false;
 
 		opcodeFunctions[o.nibbles.n4](o);
 
@@ -120,8 +125,7 @@ namespace Chip8{
 					case 0:
 						switch(o.bytes.lowByte){
 							case 0xE0: //clear screen
-								//todo
-								
+								GFX::clearVRAM();	
 								PC += 2;
 								break;
 							case 0xEE: //return from subroutine
@@ -250,7 +254,20 @@ namespace Chip8{
 		};
 
 		opcodeFunctions[0xD] = [&](Opcode o){ //draw sprite
-			//todo
+			std::vector<unsigned char> sprite;
+
+			for(int i = 0; i < o.nibbles.n1; i++){
+				sprite.push_back(RAM[I + i]);
+				debugStringStream << int(RAM[I + i]) << "  ";
+				
+			}
+
+			debugStringStream << o.fullOpcode;
+
+			
+			V[0xF] = (GFX::loadSpriteToVRAM(V[o.nibbles.n3], V[o.nibbles.n2], sprite)) ? 1 : 0;
+			drawFlag = true;
+
 			PC += 2;
 		};
 		
@@ -292,10 +309,12 @@ namespace Chip8{
 					I += V[o.nibbles.n3]; 
 					break;
 				case 0x29: //set I to location of sprite for character in VX
-					//todo
+					I = V[o.nibbles.n3] * 4 + 0x50; 
 					break;
 				case 0x33: //stores decimal version of VX in memory starting at I
-					//todo
+					RAM[I]     = V[o.nibbles.n3] / 100;
+					RAM[I + 1] = (V[o.nibbles.n3] / 10) % 10;
+					RAM[I + 2] = (V[o.nibbles.n3] % 100) % 10;
 					break;
 				case 0x55: //stores V0 to VX in address starting at I
 					for(int i = 0; i <= V[o.nibbles.n3]; i++)
@@ -324,6 +343,32 @@ namespace Chip8{
 
 	}
 
+	static void loadFontSet(){
+		unsigned char fontSet[] =
+		{ 
+			0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+			0x20, 0x60, 0x20, 0x20, 0x70, // 1
+			0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+			0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+			0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+			0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+			0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+			0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+			0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+			0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+			0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+			0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+			0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+			0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+			0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+			0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+		};
+
+		for(int i = 0; i < 80; i++){
+			RAM[i + 0x50] = fontSet[i];
+		}
+	}
+
 	//clears memory, sets registers appropriately, 
 	//initializes the opcode functions arrray and loads font set
 	void init(){
@@ -334,8 +379,9 @@ namespace Chip8{
 		PC = ROM_OFFSET;
 		soundTimer = 0;
 		delayTimer = 0;
+		drawFlag = false;
 		initOpcodeFunctions();
-		
+		loadFontSet();	
 
 
 

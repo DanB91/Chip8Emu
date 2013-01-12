@@ -2,6 +2,7 @@
 #include <iostream>
 #include <ncurses.h>
 #include "Chip8.h"
+#include "GFX.h"
 
 #define MIN_ARGS 2
 
@@ -79,8 +80,15 @@ int main(int argc, char **argv)
 		{
 			drawDebugOutput();	
 			handleSDLEvents();
+			
 			Chip8::step();
+
+			if(Chip8::shouldDraw())
+				GFX::drawVRAMToScreen(screen, 10);
+
 			Chip8::updateKeys();
+
+
 		}
 		
 		cleanUp();
