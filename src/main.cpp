@@ -3,12 +3,15 @@
 #include <ncurses.h>
 #include "Chip8.h"
 #include "GFX.h"
+#include "Debug.h"
+#include "Timer.h"
 
 #define MIN_ARGS 2
 
 static SDL_Event event; //represents an event such as a keypress or quititng the game
 static SDL_Surface *screen; //represents the screen
 static bool running = true; //tells whether the emulator is running
+static int currentFPS = 0; //current frames per second
 
 static void printUsageAndExit(){
 	std::cout << "Usage: chip8emu file [resolution]\n";
@@ -47,14 +50,22 @@ static void initSDL(int width, int height)
 	if((screen = SDL_SetVideoMode(width, height, 32, SDL_HWSURFACE | SDL_DOUBLEBUF)) == NULL)
 		throw Chip8Exception("Screen initialization failed");
 
+    SDL_WM_SetCaption("CHIP-8 Emulator", NULL);
+
 }
 
 void drawDebugOutput(){
-	printw("%s", Chip8::getCPUStatus().c_str());
+    Debug::debugStringStream << '\n' << Chip8::getCPUStatus() << "FPS: " << currentFPS << '\n';
+
+
+    printw("%s", Debug::debugStringStream.str().c_str());
 
 	move(0,0);
+    
 	refresh();
-
+    
+    Debug::debugStringStream.clear();
+    Debug::debugStringStream.str(std::string());
 }
 
 static void cleanUp(){
@@ -63,20 +74,14 @@ static void cleanUp(){
 	SDL_Quit();
 }
 
+static void startExecLoop(){
+	int frames = 0; //used to calculate frames per second
+    Timer fps, update;
+    
+    fps.start();
+    update.start();
 
-int main(int argc, char **argv)
-{
-	int width = 640, height = 320;
-
-	if(argc < MIN_ARGS) printUsageAndExit();
-	
-	try{
-		initSDL(width, height);
-		Chip8::init();
-		Chip8::loadGame(argv[1]);
-		initscr();
-
-		while(running)
+    while(running)
 		{
 			drawDebugOutput();	
 			handleSDLEvents();
@@ -88,9 +93,35 @@ int main(int argc, char **argv)
 
 			Chip8::updateKeys();
 
+            if(update.getTicks() > 1000){
+
+                currentFPS = frames / (fps.getTicks() / 1000.0);
+                update.start();
+            }
+
+            frames++;
+
 
 		}
-		
+
+}
+
+
+int main(int argc, char **argv)
+{
+	int width = 640, height = 320;
+
+
+	if(argc < MIN_ARGS) printUsageAndExit();
+	
+	try{
+		initSDL(width, height);
+		Chip8::init();
+		Chip8::loadGame(argv[1]);
+		initscr();
+
+        startExecLoop();
+			
 		cleanUp();
 
 	}

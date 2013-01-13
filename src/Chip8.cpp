@@ -1,6 +1,8 @@
 #include "Chip8.h"
 #include "IllegalOpcodeException.h"
 #include "GFX.h"
+#include "Debug.h"
+#include "Timer.h"
 #include <sstream>
 #include <functional>
 #include <vector>
@@ -65,11 +67,16 @@ namespace Chip8{
 	static unsigned char delayTimer; //if set above 0 it counts down to 0 at 60hz
 	static unsigned char soundTimer; //same as delayTimer
 	static bool drawFlag;
-	static std::stringstream debugStringStream;
-
+        
+    //used to calculate cycles per second
+    static int cycles = 0; 
+    static Timer cpsTimer, update;
+    static int cyclesPerSecond = 0;
+        
+      
 	//methods
 	std::string getCPUStatus(){
-		std::stringstream stream;
+		std::ostringstream stream;
 
 		stream << "Scratch Registers: ";
 
@@ -77,21 +84,31 @@ namespace Chip8{
 			stream  << "\tV" << i << ": "<< static_cast<int>(V[i]);
 		}
 
-		stream << "\n PC: " << PC << "  I: " << I << "\n" << debugStringStream;
+		stream << "\n PC: " << PC << "  I: " << I << '\n' << "Cycles Per Second:  " << cyclesPerSecond << '\n';
 
 		return stream.str();
 	}
 
 	bool shouldDraw(){ return drawFlag; }
 
-	void step(){
+	void step(){ 
 
+        cpsTimer.unpause();
+        update.unpause();
 
 		Opcode o(RAM[PC], RAM[PC + 1]);
 		drawFlag = false;
 
 		opcodeFunctions[o.nibbles.n4](o);
 
+        if(update.getTicks() > 1000){
+            cyclesPerSecond = cycles / (cpsTimer.getTicks() / 1000.0);
+            update.start();
+        }
+
+        cycles++;
+        update.pause(); 
+        cpsTimer.pause();
 		
 
 			
@@ -207,7 +224,7 @@ namespace Chip8{
 					break;
 				case 6: //shift VX to right by 1. set VF to least sig bit
 					V[0xF] = V[o.nibbles.n3] & 1;
-					V[o.nibbles.n3] >> 1;
+					V[o.nibbles.n3] >>= 1;
 					break;
 
 				case 7: //set VX = VY - VX.  Set carry flag if neccessary
@@ -216,7 +233,7 @@ namespace Chip8{
 					break;
 				case 0xE: //shift VX to left by 1. set VF to most sig bit
 					V[0xF] = V[o.nibbles.n3] & 0x80;
-					V[o.nibbles.n3] << 1;
+					V[o.nibbles.n3] <<= 1;
 					break;
 				default:
 					throw IllegalOpcodeException(o.fullOpcode);
@@ -258,11 +275,11 @@ namespace Chip8{
 
 			for(int i = 0; i < o.nibbles.n1; i++){
 				sprite.push_back(RAM[I + i]);
-				debugStringStream << int(RAM[I + i]) << "  ";
+				Debug::debugStringStream << int(RAM[I + i]) << "  ";
 				
 			}
 
-			debugStringStream << o.fullOpcode;
+			Debug::debugStringStream << o.fullOpcode;
 
 			
 			V[0xF] = (GFX::loadSpriteToVRAM(V[o.nibbles.n3], V[o.nibbles.n2], sprite)) ? 1 : 0;
@@ -381,7 +398,10 @@ namespace Chip8{
 		delayTimer = 0;
 		drawFlag = false;
 		initOpcodeFunctions();
-		loadFontSet();	
+		loadFontSet();
+        cpsTimer.start();
+        update.start();
+
 
 
 

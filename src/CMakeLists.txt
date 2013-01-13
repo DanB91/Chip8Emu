@@ -1,6 +1,6 @@
 
 
-set(ObjectFiles main.cpp Chip8.cpp GFX.cpp)
+set(ObjectFiles main.cpp Chip8.cpp GFX.cpp Debug.cpp Timer.cpp)
 
 
 add_executable (ch8emu ${ObjectFiles})
