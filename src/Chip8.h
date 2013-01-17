@@ -18,7 +18,6 @@ namespace Chip8{
 	//updates Chip8 input
 	void updateKeys(); 
 
-	std::string getCPUStatus();	
 }
 
 

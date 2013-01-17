@@ -1,4 +1,9 @@
-#include <sstream>
+#include <string>
+
 namespace Debug{
-    extern std::ostringstream debugStringStream;
+
+    void drawToScreen();
+    void init();
+    void cleanUp();
+    void writeStringToScreen(const std::string &toDraw);
 }

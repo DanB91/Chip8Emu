@@ -1,3 +1,4 @@
+#pragma once
 /*
  * Thank you lazyfoo!
  */
@@ -25,14 +26,17 @@ class Timer
         bool isPaused() { return paused; }     
 
     private:
-        //The clock time when the timer started
+        
+	//The timer status
+        bool paused;
+        bool started;
+
+	
+	//The clock time when the timer started
         int startTicks;
 
         //The ticks stored when the timer was paused
         int pausedTicks;
 
-        //The timer status
-        bool paused;
-        bool started;
-
+       
 };

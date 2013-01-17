@@ -13,14 +13,14 @@
 #define NUM_REGISTERS 16
 #define NUM_OPCODE_FUNCTIONS 16
 #define STACK_SIZE 16
-
+#define CYCLES_PER_SECOND 60
 
 namespace Chip8{
 
 	//represents an opcode.  easily access each nibble from the nibbles field
 	//access each byte from bytes field
 	union Opcode{ 
-		
+
 		//holds each nibble of the opcode
 		struct {
 			unsigned char n1:4;
@@ -28,13 +28,13 @@ namespace Chip8{
 			unsigned char n3:4;
 			unsigned char n4:4;
 		} nibbles; 
-		
+
 		struct{
 			unsigned char lowByte;
 			unsigned char highByte;
-		
+
 		} bytes;
-		
+
 		unsigned short fullOpcode; //full 2-byte opcode
 
 		Opcode(unsigned char highByte, unsigned char lowByte)
@@ -46,9 +46,9 @@ namespace Chip8{
 		;
 
 	};
-	
+
 	//globals
-	
+
 	/*
 	   holds opccode functions. There are 16 indecies of opcode functions 
 	   each index holds the series of opcode functions based on the opcodes' 
@@ -58,6 +58,7 @@ namespace Chip8{
 
 	 */	   
 	static std::function<void (Opcode)> opcodeFunctions[NUM_OPCODE_FUNCTIONS]; 
+
 	static unsigned char RAM[RAM_SIZE]; 	
 	static unsigned char V[NUM_REGISTERS]; //scratch registers
 	static unsigned short stack[STACK_SIZE]; //used to keep track of calling addrs
@@ -67,16 +68,16 @@ namespace Chip8{
 	static unsigned char delayTimer; //if set above 0 it counts down to 0 at 60hz
 	static unsigned char soundTimer; //same as delayTimer
 	static bool drawFlag;
-        
-    //used to calculate cycles per second
-    static int cycles = 0; 
-    static Timer cpsTimer, update;
-    static int cyclesPerSecond = 0;
-        
-      
+
+	//used to calculate cycles per second
+	static int cycles = 0; 
+	static Timer cpsTimer, update, capCPSTimer;
+	static int cyclesPerSecond = 0;
+
+
 	//methods
-	std::string getCPUStatus(){
-		std::ostringstream stream;
+	static void drawStatusToDebug(){
+		std::stringstream stream;
 
 		stream << "Scratch Registers: ";
 
@@ -85,33 +86,32 @@ namespace Chip8{
 		}
 
 		stream << "\n PC: " << PC << "  I: " << I << '\n' << "Cycles Per Second:  " << cyclesPerSecond << '\n';
-
-		return stream.str();
+		Debug::writeStringToScreen(stream.str());		
 	}
 
 	bool shouldDraw(){ return drawFlag; }
 
 	void step(){ 
 
-        cpsTimer.unpause();
-        update.unpause();
+		capCPSTimer.start();	
 
 		Opcode o(RAM[PC], RAM[PC + 1]);
 		drawFlag = false;
 
 		opcodeFunctions[o.nibbles.n4](o);
 
-        if(update.getTicks() > 1000){
-            cyclesPerSecond = cycles / (cpsTimer.getTicks() / 1000.0);
-            update.start();
-        }
+		if(update.getTicks() > 1000){
+			cyclesPerSecond = cycles / (cpsTimer.getTicks() / 1000.0);
+			update.start();
+		}
 
-        cycles++;
-        update.pause(); 
-        cpsTimer.pause();
-		
+		cycles++;
 
-			
+
+		if(capCPSTimer.getTicks() < 1000 / CYCLES_PER_SECOND)
+			SDL_Delay((1000 / CYCLES_PER_SECOND) - capCPSTimer.getTicks());
+
+		drawStatusToDebug();
 	}
 
 	void updateKeys(){
@@ -162,7 +162,7 @@ namespace Chip8{
 			address |= static_cast<unsigned short>(o.nibbles.n3) << 8; 
 			address |= static_cast<unsigned short>(o.nibbles.n2) << 4; 
 			address |= o.nibbles.n1;
-		       	PC = address;	
+			PC = address;	
 		};
 
 		opcodeFunctions[2] = [&](Opcode o){ //call subroutine
@@ -178,22 +178,22 @@ namespace Chip8{
 
 		opcodeFunctions[4] = [&](Opcode o){ //skip instruction if VX != NN
 			if(V[o.nibbles.n3] != o.bytes.lowByte) PC += 2;
-			
+
 			PC += 2;
 		};
 
 		opcodeFunctions[5] = [&](Opcode o){ //skip instruction if VX == VY
 			if(o.nibbles.n1 != 0) 	throw IllegalOpcodeException(o.fullOpcode);
- 
+
 			if(V[o.nibbles.n3] == V[o.nibbles.n2]) PC += 2;
 			PC += 2;
 		};
-		
+
 		opcodeFunctions[6] = [&](Opcode o){ //set VX to NN
 			V[o.nibbles.n3] = o.bytes.lowByte;
 			PC += 2;
 		};
-		
+
 		opcodeFunctions[7] = [&](Opcode o){ //add NN to VX
 			V[o.nibbles.n3] += o.bytes.lowByte;
 			PC += 2;
@@ -240,19 +240,19 @@ namespace Chip8{
 			}	
 			PC += 2;
 		};
-		
+
 		opcodeFunctions[9] = [&](Opcode o){ //skip instruction if VX != VY
 			if(o.nibbles.n1 != 0) 	throw IllegalOpcodeException(o.fullOpcode);
 			if(V[o.nibbles.n3] != V[o.nibbles.n2]) PC += 2;
 			PC += 2;
 		};
-		
+
 		opcodeFunctions[0xA] = [&](Opcode o){ //set I to NNN
 			unsigned short address = 0;
 			address |= static_cast<unsigned short>(o.nibbles.n3) << 8; 
 			address |= static_cast<unsigned short>(o.nibbles.n2) << 4; 
 			address |= o.nibbles.n1;
-		       	I = address;	
+			I = address;	
 			PC += 2;
 		};
 
@@ -261,7 +261,7 @@ namespace Chip8{
 			address |= static_cast<unsigned short>(o.nibbles.n3) << 8; 
 			address |= static_cast<unsigned short>(o.nibbles.n2) << 4; 
 			address |= o.nibbles.n1;
-		       	PC = address + V[0];	
+			PC = address + V[0];	
 		};
 
 		opcodeFunctions[0xC] = [&](Opcode o){ //set VX to random number & NN
@@ -275,19 +275,17 @@ namespace Chip8{
 
 			for(int i = 0; i < o.nibbles.n1; i++){
 				sprite.push_back(RAM[I + i]);
-				Debug::debugStringStream << int(RAM[I + i]) << "  ";
-				
+
 			}
 
-			Debug::debugStringStream << o.fullOpcode;
 
-			
+
 			V[0xF] = (GFX::loadSpriteToVRAM(V[o.nibbles.n3], V[o.nibbles.n2], sprite)) ? 1 : 0;
 			drawFlag = true;
 
 			PC += 2;
 		};
-		
+
 		opcodeFunctions[0xE] = [&](Opcode o){ 
 			switch(o.bytes.lowByte){
 				case 0x9E: //skip next instruction if key in VX is pressed
@@ -399,9 +397,8 @@ namespace Chip8{
 		drawFlag = false;
 		initOpcodeFunctions();
 		loadFontSet();
-        cpsTimer.start();
-        update.start();
-
+		cpsTimer.start();
+		update.start();
 
 
 

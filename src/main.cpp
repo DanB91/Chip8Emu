@@ -1,6 +1,6 @@
 #include <SDL/SDL.h>
 #include <iostream>
-#include <ncurses.h>
+#include <sstream>
 #include "Chip8.h"
 #include "GFX.h"
 #include "Debug.h"
@@ -20,21 +20,21 @@ static void printUsageAndExit(){
 
 static void handleSDLEvents()
 {
-    while(SDL_PollEvent(&event))
-    {
-	switch(event.type)
+	while(SDL_PollEvent(&event))
 	{
-	    case SDL_QUIT:
-		running = false;
-		return;
-	    case SDL_KEYDOWN:
-		break;
-	    case SDL_KEYUP:
-		break;
+		switch(event.type)
+		{
+			case SDL_QUIT:
+				running = false;
+				return;
+			case SDL_KEYDOWN:
+				break;
+			case SDL_KEYUP:
+				break;
+		}
+
+
 	}
-
-
-    }
 }
 
 
@@ -50,80 +50,84 @@ static void initSDL(int width, int height)
 	if((screen = SDL_SetVideoMode(width, height, 32, SDL_HWSURFACE | SDL_DOUBLEBUF)) == NULL)
 		throw Chip8Exception("Screen initialization failed");
 
-    SDL_WM_SetCaption("CHIP-8 Emulator", NULL);
+	SDL_WM_SetCaption("CHIP-8 Emulator", NULL);
 
 }
 
-void drawDebugOutput(){
-    Debug::debugStringStream << '\n' << Chip8::getCPUStatus() << "FPS: " << currentFPS << '\n';
-
-
-    printw("%s", Debug::debugStringStream.str().c_str());
-
-	move(0,0);
-    
-	refresh();
-    
-    Debug::debugStringStream.clear();
-    Debug::debugStringStream.str(std::string());
-}
 
 static void cleanUp(){
-	endwin();
+	Debug::cleanUp();
 	SDL_FreeSurface(screen);
 	SDL_Quit();
 }
 
-static void startExecLoop(){
-	int frames = 0; //used to calculate frames per second
-    Timer fps, update;
-    
-    fps.start();
-    update.start();
+static void printDebug(){
+	std::ostringstream oss;
+	oss << "FPS: " << currentFPS << '\n';
 
-    while(running)
-		{
-			drawDebugOutput();	
-			handleSDLEvents();
-			
-			Chip8::step();
-
-			if(Chip8::shouldDraw())
-				GFX::drawVRAMToScreen(screen, 10);
-
-			Chip8::updateKeys();
-
-            if(update.getTicks() > 1000){
-
-                currentFPS = frames / (fps.getTicks() / 1000.0);
-                update.start();
-            }
-
-            frames++;
-
-
-		}
+	Debug::writeStringToScreen(oss.str());
 
 }
 
+static void startExecLoop(){
+	int frames = 0; //used to calculate frames per second
+	Timer fps, update;
 
-int main(int argc, char **argv)
-{
+	fps.start();
+	update.start();
+
+	while(running)
+	{
+		Debug::drawToScreen();
+		handleSDLEvents();
+
+		Chip8::step();
+
+		if(Chip8::shouldDraw())
+			GFX::drawVRAMToScreen(screen, 10);
+
+		Chip8::updateKeys();
+
+		if(update.getTicks() > 1000){
+
+			currentFPS = frames / (fps.getTicks() / 1000.0);
+			update.start();
+		}
+
+		frames++;
+
+		printDebug();	
+
+
+
+
+	}
+
+}
+
+static void init(int argc, char **argv){
+
 	int width = 640, height = 320;
 
 
-	if(argc < MIN_ARGS) printUsageAndExit();
-	
+	if(argc < MIN_ARGS){
+		printUsageAndExit();
+	}
+
+	initSDL(width, height);
+	Chip8::init();
+	Chip8::loadGame(argv[1]);
+	Debug::init();
+
+}
+
+int main(int argc, char **argv)
+{
+
 	try{
-		initSDL(width, height);
-		Chip8::init();
-		Chip8::loadGame(argv[1]);
-		initscr();
-
-        startExecLoop();
-			
+		init(argc, argv);
+		startExecLoop();
 		cleanUp();
-
 	}
 	catch(std::exception &e)
 	{

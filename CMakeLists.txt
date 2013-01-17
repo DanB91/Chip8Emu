@@ -3,10 +3,10 @@ project (Pong)
 
 find_package(SDL REQUIRED)
 find_package(Curses REQUIRED)
-set(CMAKE_CXX_FLAGS "-std=c++11 -g")
+set(CMAKE_CXX_FLAGS "-std=c++11 -g -Wall")
 
 IF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-   set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -g")
+	set(CMAKE_CXX_FLAGS "-std=c++11 -stdlib=libc++ -g -Wall")
 ENDIF(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 
 
