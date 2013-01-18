@@ -13,7 +13,7 @@
 #define NUM_REGISTERS 16
 #define NUM_OPCODE_FUNCTIONS 16
 #define STACK_SIZE 16
-#define CYCLES_PER_SECOND 60
+#define CYCLES_PER_SECOND 480
 
 namespace Chip8{
 
@@ -86,10 +86,12 @@ namespace Chip8{
 		}
 
 		stream << "\n PC: " << PC << "  I: " << I << '\n' << "Cycles Per Second:  " << cyclesPerSecond << '\n';
+		stream << "Sound Timer: " << static_cast<unsigned>(soundTimer) << " delayTimer: " << static_cast<unsigned>(delayTimer);
 		Debug::writeStringToScreen(stream.str());		
 	}
 
 	bool shouldDraw(){ return drawFlag; }
+
 
 	void step(){ 
 
@@ -106,6 +108,14 @@ namespace Chip8{
 		}
 
 		cycles++;
+
+		if(delayTimer){
+			delayTimer--;
+		}
+
+		if(soundTimer){
+			soundTimer--;
+		}
 
 
 		if(capCPSTimer.getTicks() < 1000 / CYCLES_PER_SECOND)

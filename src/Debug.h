@@ -3,7 +3,7 @@
 namespace Debug{
 
     void drawToScreen();
-    void init();
-    void cleanUp();
+    void turnOn();
+    void turnOff();
     void writeStringToScreen(const std::string &toDraw);
 }

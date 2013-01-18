@@ -56,7 +56,7 @@ static void initSDL(int width, int height)
 
 
 static void cleanUp(){
-	Debug::cleanUp();
+	Debug::turnOff();
 	SDL_FreeSurface(screen);
 	SDL_Quit();
 }
@@ -117,7 +117,7 @@ static void init(int argc, char **argv){
 	initSDL(width, height);
 	Chip8::init();
 	Chip8::loadGame(argv[1]);
-	Debug::init();
+	Debug::turnOn();
 
 }
 

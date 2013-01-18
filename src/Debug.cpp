@@ -3,32 +3,35 @@
 namespace Debug{
 
 	static std::string debugString;
-
+	static bool isOn = false;
 
 	void writeStringToScreen(const std::string &toDraw){
-
-		debugString += toDraw + '\n';
+			if(isOn){
+				debugString += toDraw + '\n';
+			}
 	}
 
 	void drawToScreen(){
 
+		if(isOn){
+			printw("%s", debugString.c_str());
 
-		printw("%s", debugString.c_str());
 
+			move(0,0);
 
-		move(0,0);
+			refresh();
 
-		refresh();
-
-		debugString.clear();
-
+			debugString.clear();
+		}
 	}
 
-	void cleanUp(){
+	void turnOff(){
+		isOn = false;
 		endwin();
 	}
 
-	void init(){
+	void turnOn(){
+		isOn = true;
 		initscr();
 	}
 

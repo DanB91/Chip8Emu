@@ -1,4 +1,6 @@
 #include "GFX.h"
+#include "Debug.h"
+#include <sstream>
 
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
@@ -7,6 +9,20 @@ namespace GFX{
 	
 	static char VRAM[SCREEN_WIDTH][SCREEN_HEIGHT]; //if non-zero, draw a pixel, else leave black
 
+	static void drawToDebug(){
+		std::ostringstream oss;
+
+		oss << "VRAM: \n";
+
+		for(int i = 0; i < SCREEN_HEIGHT; i++){
+			for(int j = 0; j < SCREEN_WIDTH; j++){
+				oss << static_cast<unsigned>(VRAM[j][i]) << " ";
+			}
+			oss << '\n';
+		}
+
+		Debug::writeStringToScreen(oss.str());
+	}
 
 	//sets vram to all black (false)
 	void clearVRAM(){
@@ -57,11 +73,14 @@ namespace GFX{
 		for(unsigned char row : sprite){
 
 			for(int i = 0; i < 8; i++){
-				
-				if(VRAM[x + i][y] && !(row & mask))
-					bitsHaveBeenUnset = true;
-				
-				VRAM[x + i][y] = (row & mask) ? 1 : 0;
+
+				if(row & mask){
+					if(VRAM[x + i][y]){
+						bitsHaveBeenUnset = true;
+					}
+					
+					VRAM[x + i][y] ^= 1;
+				}
 				mask >>= 1;	
 			}
 
@@ -71,8 +90,10 @@ namespace GFX{
 
 			
 		}
-
+		//drawToDebug();
 		return bitsHaveBeenUnset;
 	}
 
 }
+
+
