@@ -3,6 +3,7 @@
 #include "GFX.h"
 #include "Debug.h"
 #include "Timer.h"
+#include "Keyboard.h"
 #include <sstream>
 #include <functional>
 #include <vector>
@@ -13,7 +14,7 @@
 #define NUM_REGISTERS 16
 #define NUM_OPCODE_FUNCTIONS 16
 #define STACK_SIZE 16
-#define CYCLES_PER_SECOND 480
+#define CYCLES_PER_SECOND 120
 
 namespace Chip8{
 
@@ -37,13 +38,12 @@ namespace Chip8{
 
 		unsigned short fullOpcode; //full 2-byte opcode
 
-		Opcode(unsigned char highByte, unsigned char lowByte)
-		{
-			fullOpcode = 0;
-			fullOpcode |= static_cast<unsigned short>(highByte) << 8;
-			fullOpcode |= lowByte;
+		Opcode(unsigned char highByte, unsigned char lowByte){
+			bytes.highByte = highByte;
+			bytes.lowByte = lowByte;
+			
 		}
-		;
+		
 
 	};
 
@@ -85,8 +85,10 @@ namespace Chip8{
 			stream  << "\tV" << i << ": "<< static_cast<int>(V[i]);
 		}
 
-		stream << "\n PC: " << PC << "  I: " << I << '\n' << "Cycles Per Second:  " << cyclesPerSecond << '\n';
-		stream << "Sound Timer: " << static_cast<unsigned>(soundTimer) << " delayTimer: " << static_cast<unsigned>(delayTimer);
+		stream << "\n PC: " << std::hex <<PC << "  I: " << std::hex << I << '\n' << "Cycles Per Second:  " << cyclesPerSecond << '\n';
+		stream << "Sound Timer: " << static_cast<unsigned>(soundTimer) << " delayTimer: " << static_cast<unsigned>(delayTimer) << '\n';
+		stream << "Cycles: " << cycles << '\n';
+		stream << "Current Instruction: " << std::hex <<Opcode(RAM[PC], RAM[PC+1]).fullOpcode;
 		Debug::writeStringToScreen(stream.str());		
 	}
 
@@ -97,6 +99,8 @@ namespace Chip8{
 
 		capCPSTimer.start();	
 
+		drawStatusToDebug();
+		
 		Opcode o(RAM[PC], RAM[PC + 1]);
 		drawFlag = false;
 
@@ -121,7 +125,6 @@ namespace Chip8{
 		if(capCPSTimer.getTicks() < 1000 / CYCLES_PER_SECOND)
 			SDL_Delay((1000 / CYCLES_PER_SECOND) - capCPSTimer.getTicks());
 
-		drawStatusToDebug();
 	}
 
 	void updateKeys(){
@@ -162,8 +165,6 @@ namespace Chip8{
 								throw IllegalOpcodeException(o.fullOpcode);
 						}
 						break;
-					default:
-						throw IllegalOpcodeException(o.fullOpcode);
 				}
 			};
 
@@ -299,10 +300,12 @@ namespace Chip8{
 		opcodeFunctions[0xE] = [&](Opcode o){ 
 			switch(o.bytes.lowByte){
 				case 0x9E: //skip next instruction if key in VX is pressed
-					//todo
+					if(Keyboard::isKeyOnKeypadPressed(V[o.nibbles.n3]))
+						PC += 2;	
 					break;
 				case 0xA1: //skip next instruction if key in VX is NOT pressed
-					//todo
+					if(!Keyboard::isKeyOnKeypadPressed(V[o.nibbles.n3]))
+						PC += 2;
 					break;
 				default:
 					throw IllegalOpcodeException(o.fullOpcode);
@@ -317,7 +320,7 @@ namespace Chip8{
 					V[o.nibbles.n3] = delayTimer;
 					break;
 				case 0xA: //wait for key press and store it in VX
-					//todo
+					V[o.nibbles.n3] = Keyboard::waitForKeyPress();
 					break;
 				case 0x15: //set delay timer to VX
 					delayTimer = V[o.nibbles.n3];
@@ -334,7 +337,7 @@ namespace Chip8{
 					I += V[o.nibbles.n3]; 
 					break;
 				case 0x29: //set I to location of sprite for character in VX
-					I = V[o.nibbles.n3] * 4 + 0x50; 
+					I = V[o.nibbles.n3] * 5 + 0x50; 
 					break;
 				case 0x33: //stores decimal version of VX in memory starting at I
 					RAM[I]     = V[o.nibbles.n3] / 100;
@@ -342,14 +345,14 @@ namespace Chip8{
 					RAM[I + 2] = (V[o.nibbles.n3] % 100) % 10;
 					break;
 				case 0x55: //stores V0 to VX in address starting at I
-					for(int i = 0; i <= V[o.nibbles.n3]; i++)
+					for(int i = 0; i <= o.nibbles.n3; i++)
 						RAM[I + i] = V[i];
 
 					I += o.nibbles.n3 + 1;
 					break;
 
 				case 0x65: //stores memory starting from I into V0 to VX
-					for(int i = 0; i <= V[o.nibbles.n3]; i++)
+					for(int i = 0; i <= o.nibbles.n3; i++)
 						V[i] = RAM[I + i];
 
 					I += o.nibbles.n3 + 1;
@@ -371,22 +374,22 @@ namespace Chip8{
 	static void loadFontSet(){
 		unsigned char fontSet[] =
 		{ 
-			0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-			0x20, 0x60, 0x20, 0x20, 0x70, // 1
-			0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-			0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-			0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-			0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-			0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-			0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-			0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-			0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-			0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-			0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-			0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-			0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-			0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-			0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+			0xF0, 0x90, 0x90, 0x90, 0xF0, // 0 0x50
+			0x20, 0x60, 0x20, 0x20, 0x70, // 1 0x55
+			0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2 0x5A
+			0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3 0x5F
+			0x90, 0x90, 0xF0, 0x10, 0x10, // 4 0x64
+			0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5 0x69
+			0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6 0x6E
+			0xF0, 0x10, 0x20, 0x40, 0x40, // 7 0x73
+			0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8 0x78
+			0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9 0x7D
+			0xF0, 0x90, 0xF0, 0x90, 0x90, // A 0x82
+			0xE0, 0x90, 0xE0, 0x90, 0xE0, // B 0x87
+			0xF0, 0x80, 0x80, 0x80, 0xF0, // C 0x8C
+			0xE0, 0x90, 0x90, 0x90, 0xE0, // D 0x91
+			0xF0, 0x80, 0xF0, 0x80, 0xF0, // E 0x96
+			0xF0, 0x80, 0xF0, 0x80, 0x80  // F 0x9B
 		};
 
 		for(int i = 0; i < 80; i++){

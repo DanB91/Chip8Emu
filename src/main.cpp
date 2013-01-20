@@ -5,6 +5,7 @@
 #include "GFX.h"
 #include "Debug.h"
 #include "Timer.h"
+#include "Keyboard.h"
 
 #define MIN_ARGS 2
 
@@ -28,9 +29,10 @@ static void handleSDLEvents()
 				running = false;
 				return;
 			case SDL_KEYDOWN:
-				break;
 			case SDL_KEYUP:
+				Keyboard::setState(event.key);
 				break;
+					
 		}
 
 
@@ -79,14 +81,15 @@ static void startExecLoop(){
 	while(running)
 	{
 		Debug::drawToScreen();
-		handleSDLEvents();
-
+		
 		Chip8::step();
 
 		if(Chip8::shouldDraw())
 			GFX::drawVRAMToScreen(screen, 10);
 
-		Chip8::updateKeys();
+		handleSDLEvents();
+
+		Keyboard::updateKeys();
 
 		if(update.getTicks() > 1000){
 
@@ -118,6 +121,7 @@ static void init(int argc, char **argv){
 	Chip8::init();
 	Chip8::loadGame(argv[1]);
 	Debug::turnOn();
+	Keyboard::init();
 
 }
 

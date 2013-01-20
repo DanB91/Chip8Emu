@@ -1,9 +1,11 @@
 #include "Debug.h"
 #include <ncurses.h>
+#include <stdio.h>
 namespace Debug{
 
 	static std::string debugString;
 	static bool isOn = false;
+	static FILE *log;
 
 	void writeStringToScreen(const std::string &toDraw){
 			if(isOn){
@@ -15,7 +17,7 @@ namespace Debug{
 
 		if(isOn){
 			printw("%s", debugString.c_str());
-
+			fprintf(log, "%s", debugString.c_str());
 
 			move(0,0);
 
@@ -27,11 +29,13 @@ namespace Debug{
 
 	void turnOff(){
 		isOn = false;
+		fclose(log);
 		endwin();
 	}
 
 	void turnOn(){
 		isOn = true;
+		log = fopen("log.txt", "w");
 		initscr();
 	}
 
