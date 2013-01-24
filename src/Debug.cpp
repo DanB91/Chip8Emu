@@ -5,7 +5,7 @@ namespace Debug{
 
 	static std::string debugString;
 	static bool isOn = false;
-	static FILE *log;
+	static FILE *log = NULL;
 
 	void writeStringToScreen(const std::string &toDraw){
 			if(isOn){
@@ -29,7 +29,7 @@ namespace Debug{
 
 	void turnOff(){
 		isOn = false;
-		fclose(log);
+		if (log) fclose(log);
 		endwin();
 	}
 

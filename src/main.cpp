@@ -1,6 +1,8 @@
 #include <SDL/SDL.h>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+#include <map>
 #include "Chip8.h"
 #include "GFX.h"
 #include "Debug.h"
@@ -108,19 +110,68 @@ static void startExecLoop(){
 
 }
 
+
+static std::map<std::string, std::string> parseArguments(int argc, char **argv)
+{
+	std::map<std::string, std::string> arguments;
+	arguments["clockSpeed"] = "120";
+	arguments["debug"] = "false";
+
+	for(int i = 1; i < argc; i++)
+	{
+		if(argv[i][0] == '-')
+		{
+			switch(argv[i][1])
+			{
+				case 'c':
+					if(i + 1 < argc){
+						 arguments["clockSpeed"] = argv[++i];
+					}
+
+					break;
+				case 'd':
+					arguments["debug"] = "true";
+					break;
+				default:
+					printUsageAndExit();
+			}
+
+		}
+		else{
+			arguments["gamePath"] = argv[i];
+		}
+		
+	}
+
+	return arguments;
+}
+
+
+
 static void init(int argc, char **argv){
 
 	int width = 640, height = 320;
+	std::map<std::string, std::string> args = parseArguments(argc, argv);
+	
+	try{	
+		const char *gamePath = args.at("gamePath").c_str();	
+		bool debugFlag = args.at("debug") == "true";
+		int clockSpeed = atoi(args.at("clockSpeed").c_str());
 
 
-	if(argc < MIN_ARGS){
+
+		initSDL(width, height);
+		Chip8::init(clockSpeed);
+		Chip8::loadGame(gamePath);
+
+		if(debugFlag){
+			Debug::turnOn();
+		}
+	}
+	catch(std::out_of_range &){
 		printUsageAndExit();
 	}
 
-	initSDL(width, height);
-	Chip8::init();
-	Chip8::loadGame(argv[1]);
-	Debug::turnOn();
 	Keyboard::init();
 
 }

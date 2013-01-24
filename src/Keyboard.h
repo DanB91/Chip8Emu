@@ -6,7 +6,7 @@ namespace Keyboard{
 	bool isKeyOnKeypadPressed(int key);
 
 	
-	SDLKey waitForKeyPress();
+	unsigned char waitForKeyPress();
 
 	void updateKeys();
 	void setState(const SDL_KeyboardEvent &state);

@@ -4,10 +4,10 @@
 
 namespace Chip8{
 
-	void init();
+	void init(int cyclesPerSecond);
 
 	//loads the program into chip8 memeory
-	void loadGame(char *fileName);
+	void loadGame(const char *fileName);
 	
 	//if false, sprites should be drawn during that frame
 	bool shouldDraw(); 

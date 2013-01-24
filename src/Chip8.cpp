@@ -14,7 +14,6 @@
 #define NUM_REGISTERS 16
 #define NUM_OPCODE_FUNCTIONS 16
 #define STACK_SIZE 16
-#define CYCLES_PER_SECOND 120
 
 namespace Chip8{
 
@@ -74,6 +73,8 @@ namespace Chip8{
 	static Timer cpsTimer, update, capCPSTimer;
 	static int cyclesPerSecond = 0;
 
+	static int CYCLES_PER_SECOND;
+
 
 	//methods
 	static void drawStatusToDebug(){
@@ -132,12 +133,12 @@ namespace Chip8{
 
 
 	//loads game into ram
-	void loadGame(char *fileName){
+	void loadGame(const char *fileName){
 
 		FILE *f;
 
 		if((f = fopen(fileName, "r")) == NULL){
-			throw Chip8Exception("Cannot open file");
+			throw Chip8Exception("Cannot open game");
 		}
 
 		fread(RAM + ROM_OFFSET, ROM_LEN, 1, f);
@@ -399,8 +400,9 @@ namespace Chip8{
 
 	//clears memory, sets registers appropriately, 
 	//initializes the opcode functions arrray and loads font set
-	void init(){
+	void init(int cyclesPerSecond){
 
+		CYCLES_PER_SECOND = cyclesPerSecond;
 		memset(RAM, 0, RAM_SIZE);
 		memset(V, 0, NUM_REGISTERS);
 		SP = 0;

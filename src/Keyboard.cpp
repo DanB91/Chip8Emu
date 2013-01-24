@@ -1,10 +1,18 @@
 #include "Keyboard.h"
+#include "Debug.h"
+#include "Chip8Exception.h"
+#include <iostream>
+#include <sstream>
 #define NUM_KEYS 16
 
 namespace Keyboard{
 
 	static SDL_KeyboardEvent keyboardState;
 	static bool keysPressed[NUM_KEYS];
+	static const SDLKey keyboardKeys[] = {SDLK_x, SDLK_1, SDLK_2, SDLK_3, 
+					SDLK_q, SDLK_w, SDLK_e, SDLK_a,
+					SDLK_s, SDLK_d, SDLK_z, SDLK_c,
+					SDLK_4, SDLK_r, SDLK_r, SDLK_v};
 
 	static void resetKeys(){
 		for(int i = 0; i < NUM_KEYS; i++){
@@ -35,16 +43,35 @@ namespace Keyboard{
 	}
 
 
-	SDLKey waitForKeyPress(){
+	unsigned char waitForKeyPress(){
 
 		SDL_Event e;
+		std::ostringstream os;
 
-		while(SDL_PollEvent(&e) && e.type != SDL_KEYDOWN)
-			;
+		while(1){
+			if(!SDL_WaitEvent(&e)){
+				throw Chip8Exception("Error waiting for event");
+			}
 
-		keyboardState = e.key;
+			if(e.type != SDL_KEYDOWN){
+				if(e.type == SDL_QUIT){
+					exit(1);
+				}
+				continue;
+			}
 
-		return keyboardState.keysym.sym;
+			for(int i = 0; i < NUM_KEYS; i++){
+				if(keyboardKeys[i] == e.key.keysym.sym){
+				
+					return i;
+				}
+			}
+
+		}
+		
+
+
+
 
 
 	}
@@ -60,52 +87,18 @@ namespace Keyboard{
 
 	void updateKeys(){
 
+		for(int i = 0; i < NUM_KEYS; i++){
+			
+			if(isKeyDown(keyboardKeys[i])){
+				keysPressed[i] = true;
+			}
+
+			if(isKeyUp(keyboardKeys[i])){
+				keysPressed[i] = false;
+			}
+		}
 
 	
-		int keyPressed = 
-			(isKeyDown(SDLK_1)) ? 1 :
-			(isKeyDown(SDLK_2)) ? 2 :
-			(isKeyDown(SDLK_3)) ? 3 : 
-			(isKeyDown(SDLK_4)) ? 0xC : 
-			(isKeyDown(SDLK_q)) ? 4 : 
-			(isKeyDown(SDLK_w)) ? 5 : 
-			(isKeyDown(SDLK_e)) ? 6 : 
-			(isKeyDown(SDLK_r)) ? 0xD : 
-			(isKeyDown(SDLK_a)) ? 7 :
-			(isKeyDown(SDLK_s)) ? 8 : 
-			(isKeyDown(SDLK_d)) ? 9 : 
-			(isKeyDown(SDLK_f)) ? 0xE : 
-			(isKeyDown(SDLK_z)) ? 0xA : 
-			(isKeyDown(SDLK_x)) ? 0 :
-			(isKeyDown(SDLK_c)) ? 0xB : 
-			(isKeyDown(SDLK_v)) ? 0xF : 
-			-1;
-	int keyReleased = 
-			(isKeyUp(SDLK_1)) ? 1 :
-			(isKeyUp(SDLK_2)) ? 2 :
-			(isKeyUp(SDLK_3)) ? 3 : 
-			(isKeyUp(SDLK_4)) ? 0xC : 
-			(isKeyUp(SDLK_q)) ? 4 : 
-			(isKeyUp(SDLK_w)) ? 5 : 
-			(isKeyUp(SDLK_e)) ? 6 : 
-			(isKeyUp(SDLK_r)) ? 0xD : 
-			(isKeyUp(SDLK_a)) ? 7 :
-			(isKeyUp(SDLK_s)) ? 8 : 
-			(isKeyUp(SDLK_d)) ? 9 : 
-			(isKeyUp(SDLK_f)) ? 0xE : 
-			(isKeyUp(SDLK_z)) ? 0xA : 
-			(isKeyUp(SDLK_x)) ? 0 :
-			(isKeyUp(SDLK_c)) ? 0xB : 
-			(isKeyUp(SDLK_v)) ? 0xF : 
-			-1;
-
-		if(keyPressed != -1){
-			keysPressed[keyPressed] = true;
-		}
-		
-		if(keyReleased != -1){
-			keysPressed[keyReleased] = false;
-		}
-
+	
 	}
 }
