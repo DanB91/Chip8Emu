@@ -62,7 +62,7 @@ namespace Keyboard{
 
 			for(int i = 0; i < NUM_KEYS; i++){
 				if(keyboardKeys[i] == e.key.keysym.sym){
-				
+					keyboardState = e.key;	
 					return i;
 				}
 			}

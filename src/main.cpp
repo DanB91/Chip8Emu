@@ -17,7 +17,7 @@ static bool running = true; //tells whether the emulator is running
 static int currentFPS = 0; //current frames per second
 
 static void printUsageAndExit(){
-	std::cout << "Usage: chip8emu file [resolution]\n";
+	std::cout << "Usage: chip8emu [game] [-d][-c cyles_per_second]\n";
 	exit(1);
 }
 

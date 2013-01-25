@@ -7,6 +7,7 @@
 #include <sstream>
 #include <functional>
 #include <vector>
+#include <iostream>
 
 #define RAM_SIZE 0x1000
 #define ROM_OFFSET 0x200
@@ -119,7 +120,10 @@ namespace Chip8{
 		}
 
 		if(soundTimer){
-			soundTimer--;
+			if(--soundTimer == 0){
+				std::cout << '\a';
+				std::cout.flush();
+			}
 		}
 
 
@@ -127,9 +131,6 @@ namespace Chip8{
 			SDL_Delay((1000 / CYCLES_PER_SECOND) - capCPSTimer.getTicks());
 
 	}
-
-	void updateKeys(){
-	}	
 
 
 	//loads game into ram
@@ -231,7 +232,7 @@ namespace Chip8{
 					V[o.nibbles.n3] += V[o.nibbles.n2];
 					break;
 				case 5: // subtract VY from VX.  Set carry flag if neccessary
-					V[0xF] = (static_cast<unsigned int>(V[o.nibbles.n3]) - static_cast<unsigned int>(V[o.nibbles.n2])) >> 8;
+					V[0xF] = (V[o.nibbles.n3] >= V[o.nibbles.n2]) ? 1 : 0; 				
 					V[o.nibbles.n3] -= V[o.nibbles.n2];
 					break;
 				case 6: //shift VX to right by 1. set VF to least sig bit
@@ -240,11 +241,12 @@ namespace Chip8{
 					break;
 
 				case 7: //set VX = VY - VX.  Set carry flag if neccessary
-					V[0xF] = (static_cast<unsigned int>(V[o.nibbles.n2]) - static_cast<unsigned int>(V[o.nibbles.n3])) >> 8;
+					
+					V[0xF] = (V[o.nibbles.n2] >= V[o.nibbles.n3]) ? 1 : 0; 				
 					V[o.nibbles.n3] = V[o.nibbles.n2] - V[o.nibbles.n3];
 					break;
 				case 0xE: //shift VX to left by 1. set VF to most sig bit
-					V[0xF] = V[o.nibbles.n3] & 0x80;
+					V[0xF] = (V[o.nibbles.n3] & 0x80) ? 1 : 0;
 					V[o.nibbles.n3] <<= 1;
 					break;
 				default:

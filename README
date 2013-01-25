@@ -1,0 +1,46 @@
+This a CHIP-8 emulator which takes in a CHIP-8 program as input.
+
+NOTE: DOES NOT SUPPORT SUPERCHIP OR MEGACHIP PROGRAMS.
+
+
+Requirements:
+	-CMake
+	-SDL
+	-ncurses
+	-compiler that supports C++11 (gcc 4.7 or higher should do fine.  This will compile on OS X Mountain Lion)
+
+Commands to compile compile:
+	1) mkdir build
+	2) cd build
+	3) cmake ..
+	4) make
+	5) The executable's path will be "bin/ch8emu"
+
+Program arguments:
+	game: Path to the game to run.
+	-d: Turns on the ncurses debug viewer and will log each cycle to "log.txt"
+	-c cycles_per_second: Will make the emulator run at most "cycles_per_second" cycles per second.
+
+
+Controls:
+
+Keypad                   Keyboard
++-+-+-+-+                +-+-+-+-+
+|1|2|3|C|                |1|2|3|4|
++-+-+-+-+                +-+-+-+-+
+|4|5|6|D|                |Q|W|E|R|
++-+-+-+-+       =>       +-+-+-+-+
+|7|8|9|E|                |A|S|D|F|
++-+-+-+-+                +-+-+-+-+
+|A|0|B|F|                |Z|X|C|V|
++-+-+-+-+                +-+-+-+-+
+
+
+Link to CHIP-8 games: http://www.chip8.com/?page=109
+
+TODO:
+	-Make sound not the system beep (use a .wav file).
+	-Optimize code and try to reduce flicker
+	-Allow choosing resolutions
+	-Support SuperChip and MegaChip
+	-If there should be other things, please let me know!
